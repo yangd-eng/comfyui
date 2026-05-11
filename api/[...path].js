@@ -22,18 +22,9 @@ export default function handler(req, res) {
     return;
   }
 
-  // Build target path: /api/upload/image, /api/prompt, etc.
-  const pathSegments = Array.isArray(req.query.path) ? req.query.path : [req.query.path];
-  const targetPath = '/api/' + pathSegments.join('/');
-
-  // Forward query string (except internal 'path' param)
-  const originalUrl = new URL(req.url, 'http://localhost');
-  const params = new URLSearchParams();
-  originalUrl.searchParams.forEach((v, k) => {
-    if (k !== 'path') params.set(k, v);
-  });
-  const queryString = params.toString();
-  const fullPath = targetPath + (queryString ? '?' + queryString : '');
+  // Use req.url directly — e.g. /api/upload/image, /api/prompt, /api/job/xxx/status
+  const fullPath = req.url;
+  console.log(`[Proxy] ${req.method} ${fullPath}`);
 
   // Forward headers
   const forwardHeaders = {};
