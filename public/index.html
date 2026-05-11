@@ -724,7 +724,7 @@ document.getElementById('generateBtn').onclick = async () => {
     let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await fetch(`${API_BASE}/api/job/${promptId}/status`, {
+      const statusRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, {
         headers: { 'X-API-Key': apiKey },
       });
       if (!statusRes.ok) continue;
@@ -750,7 +750,7 @@ document.getElementById('generateBtn').onclick = async () => {
     // Try multiple endpoints to get results
     let outputs = {};
     const endpoints = [
-      `${API_BASE}/api/job/${promptId}`,
+      `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
     ];
     let lastErr = '결과 조회 실패';
@@ -895,7 +895,7 @@ async function generateAngle() {
     let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
-      const sRes = await fetch(`${API_BASE}/api/job/${promptId}/status`, { headers: { 'X-API-Key': apiKey } });
+      const sRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, { headers: { 'X-API-Key': apiKey } });
       if (!sRes.ok) continue;
       const sData = await sRes.json();
       pollCount++;
@@ -916,7 +916,7 @@ async function generateAngle() {
     // Try multiple endpoints to get results
     let outputs = {};
     const endpoints = [
-      `${API_BASE}/api/job/${promptId}`,
+      `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
     ];
     let lastErr = '결과 조회 실패';
