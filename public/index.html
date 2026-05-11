@@ -747,17 +747,28 @@ document.getElementById('generateBtn').onclick = async () => {
     // 5. Get results
     setStatus('결과 가져오는 중...', 'pending');
     setProgressStep('ps-result', 90);
-    const histRes = await fetch(`${API_BASE}/api/job/${promptId}`, {
-      headers: { 'X-API-Key': apiKey },
-    });
-    const histText = await histRes.text();
-    if (!histRes.ok) throw new Error(`결과 조회 실패 (${histRes.status}): ${histText.slice(0,200)}`);
-    let histData;
-    try { histData = JSON.parse(histText); } catch(e) { throw new Error(`결과 파싱 실패: ${histText.slice(0,200)}`); }
+    // Try multiple endpoints to get results
+    let outputs = {};
+    const endpoints = [
+      `${API_BASE}/api/job/${promptId}`,
+      `${API_BASE}/api/history/${promptId}`,
+    ];
+    let lastErr = '결과 조회 실패';
+    for (const ep of endpoints) {
+      try {
+        const r = await fetch(ep, { headers: { 'X-API-Key': apiKey } });
+        const txt = await r.text();
+        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status} ${ep.split('/').pop()}): ${txt.slice(0,150)}`; continue; }
+        const d = JSON.parse(txt);
+        outputs = d.outputs ?? d[promptId]?.outputs ?? d;
+        lastErr = null;
+        break;
+      } catch(e) { lastErr = e.message; }
+    }
+    if (lastErr && Object.keys(outputs).length === 0) throw new Error(lastErr);
 
     // Find output images from preview nodes
     const previews = GROUP_PREVIEWS[activeGroup];
-    const outputs = histData.outputs ?? histData[promptId]?.outputs ?? {};
 
     let fullImgUrl = null, faceImgUrl = null;
     const previewNode0 = String(previews[0]);
@@ -902,12 +913,25 @@ async function generateAngle() {
 
     setStatus('결과 가져오는 중...', 'pending');
     setProgressStep('ps-result', 90);
-    const histRes = await fetch(`${API_BASE}/api/job/${promptId}`, { headers: { 'X-API-Key': apiKey } });
-    const histText = await histRes.text();
-    if (!histRes.ok) throw new Error(`결과 조회 실패 (${histRes.status}): ${histText.slice(0,200)}`);
-    let histData;
-    try { histData = JSON.parse(histText); } catch(e) { throw new Error(`결과 파싱 실패: ${histText.slice(0,200)}`); }
-    const outputs = histData.outputs ?? histData[promptId]?.outputs ?? {};
+    // Try multiple endpoints to get results
+    let outputs = {};
+    const endpoints = [
+      `${API_BASE}/api/job/${promptId}`,
+      `${API_BASE}/api/history/${promptId}`,
+    ];
+    let lastErr = '결과 조회 실패';
+    for (const ep of endpoints) {
+      try {
+        const r = await fetch(ep, { headers: { 'X-API-Key': apiKey } });
+        const txt = await r.text();
+        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status} ${ep.split('/').pop()}): ${txt.slice(0,150)}`; continue; }
+        const d = JSON.parse(txt);
+        outputs = d.outputs ?? d[promptId]?.outputs ?? d;
+        lastErr = null;
+        break;
+      } catch(e) { lastErr = e.message; }
+    }
+    if (lastErr && Object.keys(outputs).length === 0) throw new Error(lastErr);
     const previewNodeId = String(ANGLE_PREVIEWS[selectedAngle]);
     let imgUrl = null;
     if (outputs[previewNodeId]?.images?.[0]) {
