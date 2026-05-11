@@ -15,7 +15,7 @@ export default function handler(req, res) {
     if (req.headers[k]) forwardHeaders[k] = req.headers[k];
   });
   forwardHeaders['host'] = 'cloud.comfy.org';
-  forwardHeaders['X-API-Key'] = 'c04734ac6bdf5f6413a4e455cef717992886096c6e2c655c97d86a98efccc4c3';
+  forwardHeaders['X-API-Key'] = 'comfyui-1a281b58cd6306965351fbdd8355eda2b1153682807fd467516a1e71a8086f77';
 
   const proxyReq = https.request(
     { hostname: 'cloud.comfy.org', path: fullPath, method: req.method, headers: forwardHeaders },
