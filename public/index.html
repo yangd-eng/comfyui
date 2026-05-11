@@ -652,6 +652,49 @@ function setProgressStep(activeId, pct) {
 }
 
 // ── Generate ──
+
+// ── Workflow Pruning ──
+// Traverses backwards from output nodes, only including needed nodes.
+// SwitchCase nodes only follow the selected case branch.
+function pruneWorkflow(wf, startNodeIds, switchSelects = {}) {
+  const needed = new Set();
+  const queue = [...startNodeIds.map(String)];
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift();
+    if (needed.has(nodeId) || !wf[nodeId]) continue;
+    needed.add(nodeId);
+
+    const node = wf[nodeId];
+    const inputs = node.inputs || {};
+    const isSwitchNode = 'case_0' in inputs && 'select' in inputs;
+
+    if (isSwitchNode) {
+      // Only follow the selected case
+      const selectIdx = (switchSelects[nodeId] !== undefined)
+        ? switchSelects[nodeId]
+        : (typeof inputs.select === 'number' ? inputs.select : 0);
+      const sel = inputs[`case_${selectIdx}`];
+      if (Array.isArray(sel)) queue.push(String(sel[0]));
+    } else {
+      for (const val of Object.values(inputs)) {
+        if (Array.isArray(val) && val.length >= 2 && typeof val[0] === 'string') {
+          queue.push(val[0]);
+        }
+      }
+    }
+  }
+
+  const pruned = {};
+  for (const id of needed) {
+    if (wf[id]) pruned[id] = wf[id];
+  }
+  return pruned;
+}
+
+const SAVE_NODES_EXPR = { '35': '8024', '36': '8022', '38': '8025' };
+const SAVE_NODES_ANGLE = {"정후면": "2594", "하이앵글": "2602", "로우앵글": "2601", "우측면": "2598", "우측 3/4": "2599", "우측 후방": "2595", "좌측 3/4": "2600", "좌측면": "2597", "좌측 후방": "2596"};
+
 function uploadImageXHR(file, apiKey) {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
@@ -695,6 +738,11 @@ document.getElementById('generateBtn').onclick = async () => {
     // API format: wf is {node_id: {inputs, class_type}, ...}
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
+
+    // Prune: only keep nodes needed for the selected expression
+    const saveNodeId = SAVE_NODES_EXPR[activeGroup];
+    wf = pruneWorkflow(wf, [saveNodeId], { [activeGroup]: caseIdx });
+    console.log(`[Expr] 실행 노드 수: ${Object.keys(wf).length}`);
 
     // 3. Submit workflow
     setStatus('워크플로우 제출 중...', 'pending');
@@ -871,6 +919,11 @@ async function generateAngle() {
 
     // API format: wf is {node_id: {inputs, class_type}, ...}
     wf['41'].inputs.image = filename;  // LoadImage
+
+    // Prune: only keep nodes needed for the selected angle
+    const angleSaveId = SAVE_NODES_ANGLE[selectedAngle];
+    wf = pruneWorkflow(wf, [angleSaveId]);
+    console.log(`[Angle] 실행 노드 수: ${Object.keys(wf).length}`);
 
     setStatus('워크플로우 제출 중...', 'pending');
     setProgressStep('ps-submit', 55);
