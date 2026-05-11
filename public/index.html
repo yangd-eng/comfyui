@@ -654,9 +654,10 @@ function setProgressStep(activeId, pct) {
 // ── Generate ──
 
 // ── Workflow Pruning ──
-// Traverses backwards from output nodes, only including needed nodes.
-// SwitchCase nodes only follow the selected case branch.
-function pruneWorkflow(wf, startNodeIds, switchSelects = {}) {
+// Traverses backwards from the selected SaveImage, including ALL reachable nodes.
+// SwitchCase keeps all case inputs (required by ComfyUI validation).
+// ComfyUI internally only executes the selected case branch.
+function pruneWorkflow(wf, startNodeIds) {
   const needed = new Set();
   const queue = [...startNodeIds.map(String)];
 
@@ -665,41 +666,17 @@ function pruneWorkflow(wf, startNodeIds, switchSelects = {}) {
     if (needed.has(nodeId) || !wf[nodeId]) continue;
     needed.add(nodeId);
 
-    const node = wf[nodeId];
-    const inputs = node.inputs || {};
-    const isSwitchNode = 'case_0' in inputs && 'select' in inputs;
-
-    if (isSwitchNode) {
-      // Only follow the selected case
-      const selectIdx = (switchSelects[nodeId] !== undefined)
-        ? switchSelects[nodeId]
-        : (typeof inputs.select === 'number' ? inputs.select : 0);
-      const sel = inputs[`case_${selectIdx}`];
-      if (Array.isArray(sel)) queue.push(String(sel[0]));
-    } else {
-      for (const val of Object.values(inputs)) {
-        if (Array.isArray(val) && val.length >= 2 && typeof val[0] === 'string') {
-          queue.push(val[0]);
-        }
+    const inputs = wf[nodeId].inputs || {};
+    for (const val of Object.values(inputs)) {
+      if (Array.isArray(val) && val.length >= 2 && typeof val[0] === 'string') {
+        queue.push(val[0]);
       }
     }
   }
 
   const pruned = {};
   for (const id of needed) {
-    if (!wf[id]) continue;
-    // Deep copy node
-    pruned[id] = JSON.parse(JSON.stringify(wf[id]));
-    // For SwitchCase: remove unselected case inputs so validation doesn't fail
-    const inputs = pruned[id].inputs || {};
-    if ('case_0' in inputs && 'select' in inputs) {
-      const selectIdx = switchSelects[id] !== undefined ? switchSelects[id] : inputs.select;
-      for (const key of Object.keys(inputs)) {
-        if (key.startsWith('case_') && key !== `case_${selectIdx}`) {
-          delete pruned[id].inputs[key];
-        }
-      }
-    }
+    if (wf[id]) pruned[id] = wf[id];
   }
   return pruned;
 }
@@ -753,7 +730,7 @@ document.getElementById('generateBtn').onclick = async () => {
 
     // Prune: only keep nodes needed for the selected expression
     const saveNodeId = SAVE_NODES_EXPR[activeGroup];
-    wf = pruneWorkflow(wf, [saveNodeId], { [activeGroup]: caseIdx });
+    wf = pruneWorkflow(wf, [saveNodeId]);
     console.log(`[Expr] 실행 노드 수: ${Object.keys(wf).length}`);
 
     // 3. Submit workflow
