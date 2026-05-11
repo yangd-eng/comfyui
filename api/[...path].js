@@ -1,70 +1,33 @@
-/**
- * Expression Studio - Vercel Proxy Function
- * Forwards all /api/* requests to cloud.comfy.org
- */
-
 import https from 'https';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const config = { api: { bodyParser: false } };
 
 export default function handler(req, res) {
-  // CORS preflight
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-API-Key, Content-Type, Content-Length');
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  // Use req.url directly — e.g. /api/upload/image, /api/prompt, /api/job/xxx/status
   const fullPath = req.url;
-  console.log(`[Proxy] ${req.method} ${fullPath}`);
-
-  // Forward headers
   const forwardHeaders = {};
-  const allowedHeaders = ['x-api-key', 'content-type', 'content-length'];
-  Object.entries(req.headers).forEach(([k, v]) => {
-    if (allowedHeaders.includes(k.toLowerCase())) {
-      forwardHeaders[k] = v;
-    }
+  ['content-type', 'content-length'].forEach(k => {
+    if (req.headers[k]) forwardHeaders[k] = req.headers[k];
   });
   forwardHeaders['host'] = 'cloud.comfy.org';
+  forwardHeaders['X-API-Key'] = 'c04734ac6bdf5f6413a4e455cef717992886096c6e2c655c97d86a98efccc4c3';
 
-  const options = {
-    hostname: 'cloud.comfy.org',
-    path: fullPath,
-    method: req.method,
-    headers: forwardHeaders,
-  };
-
-  const proxyReq = https.request(options, (proxyRes) => {
-    const responseHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Content-Type': proxyRes.headers['content-type'] || 'application/json',
-    };
-    if (proxyRes.headers['content-length']) {
-      responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
+  const proxyReq = https.request(
+    { hostname: 'cloud.comfy.org', path: fullPath, method: req.method, headers: forwardHeaders },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': proxyRes.headers['content-type'] || 'application/json',
+      });
+      proxyRes.pipe(res);
     }
-
-    res.writeHead(proxyRes.statusCode, responseHeaders);
-    proxyRes.pipe(res);
-  });
-
-  proxyReq.on('error', (err) => {
-    console.error('[Proxy Error]', err.message);
-    res.status(502).json({ error: err.message });
-  });
-
-  proxyReq.setTimeout(120000, () => {
-    proxyReq.destroy();
-    res.status(504).json({ error: 'Timeout' });
-  });
-
+  );
+  proxyReq.on('error', err => res.status(502).json({ error: err.message }));
+  proxyReq.setTimeout(120000, () => { proxyReq.destroy(); res.status(504).json({ error: 'Timeout' }); });
   req.pipe(proxyReq);
 }
