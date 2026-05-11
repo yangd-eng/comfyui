@@ -731,7 +731,7 @@ document.getElementById('generateBtn').onclick = async () => {
     // 2. Build modified workflow
     setStatus('워크플로우 준비 중...', 'pending');
     setProgressStep('ps-submit', 40);
-    const wf = JSON.parse(JSON.stringify(WORKFLOW)); // deep copy
+    let wf = JSON.parse(JSON.stringify(WORKFLOW)); // deep copy
     const activeGroup = String(selectedExpr.sc);
     const caseIdx = selectedExpr.idx;
 
@@ -915,7 +915,7 @@ async function generateAngle() {
 
     setStatus('워크플로우 준비 중...', 'pending');
     setProgressStep('ps-submit', 40);
-    const wf = JSON.parse(JSON.stringify(ANGLE_WORKFLOW));
+    let wf = JSON.parse(JSON.stringify(ANGLE_WORKFLOW));
 
     // API format: wf is {node_id: {inputs, class_type}, ...}
     wf['41'].inputs.image = filename;  // LoadImage
