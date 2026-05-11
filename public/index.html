@@ -747,15 +747,17 @@ document.getElementById('generateBtn').onclick = async () => {
     // 5. Get results
     setStatus('결과 가져오는 중...', 'pending');
     setProgressStep('ps-result', 90);
-    const histRes = await fetch(`${API_BASE}/api/history/${promptId}`, {
+    const histRes = await fetch(`${API_BASE}/api/job/${promptId}`, {
       headers: { 'X-API-Key': apiKey },
     });
-    if (!histRes.ok) throw new Error('결과 조회 실패');
-    const histData = await histRes.json();
+    const histText = await histRes.text();
+    if (!histRes.ok) throw new Error(`결과 조회 실패 (${histRes.status}): ${histText.slice(0,200)}`);
+    let histData;
+    try { histData = JSON.parse(histText); } catch(e) { throw new Error(`결과 파싱 실패: ${histText.slice(0,200)}`); }
 
     // Find output images from preview nodes
     const previews = GROUP_PREVIEWS[activeGroup];
-    const outputs = histData[promptId]?.outputs ?? {};
+    const outputs = histData.outputs ?? histData[promptId]?.outputs ?? {};
 
     let fullImgUrl = null, faceImgUrl = null;
     const previewNode0 = String(previews[0]);
@@ -900,10 +902,12 @@ async function generateAngle() {
 
     setStatus('결과 가져오는 중...', 'pending');
     setProgressStep('ps-result', 90);
-    const histRes = await fetch(`${API_BASE}/api/history/${promptId}`, { headers: { 'X-API-Key': apiKey } });
-    if (!histRes.ok) throw new Error('결과 조회 실패');
-    const histData = await histRes.json();
-    const outputs = histData[promptId]?.outputs ?? {};
+    const histRes = await fetch(`${API_BASE}/api/job/${promptId}`, { headers: { 'X-API-Key': apiKey } });
+    const histText = await histRes.text();
+    if (!histRes.ok) throw new Error(`결과 조회 실패 (${histRes.status}): ${histText.slice(0,200)}`);
+    let histData;
+    try { histData = JSON.parse(histText); } catch(e) { throw new Error(`결과 파싱 실패: ${histText.slice(0,200)}`); }
+    const outputs = histData.outputs ?? histData[promptId]?.outputs ?? {};
     const previewNodeId = String(ANGLE_PREVIEWS[selectedAngle]);
     let imgUrl = null;
     if (outputs[previewNodeId]?.images?.[0]) {
