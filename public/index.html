@@ -599,7 +599,10 @@ document.getElementById('generateBtn').onclick = async () => {
         'X-API-Key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt: wf }),
+      body: JSON.stringify({
+        prompt: wf,
+        extra_data: { api_key_comfy_org: API_KEY },
+      }),
     });
     if (!submitRes.ok) {
       const err = await submitRes.text();
@@ -739,7 +742,10 @@ async function generateAngle() {
     const submitRes = await fetch(`${API_BASE}/api/prompt`, {
       method: 'POST',
       headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: wf }),
+      body: JSON.stringify({
+        prompt: wf,
+        extra_data: { api_key_comfy_org: API_KEY },
+      }),
     });
     if (!submitRes.ok) {
       const err = await submitRes.text();
