@@ -584,30 +584,12 @@ document.getElementById('generateBtn').onclick = async () => {
     // 2. Build modified workflow
     setStatus('워크플로우 준비 중...', 'pending');
     const wf = JSON.parse(JSON.stringify(WORKFLOW)); // deep copy
-    const activeGroup = selectedExpr.sc;
+    const activeGroup = String(selectedExpr.sc);
     const caseIdx = selectedExpr.idx;
 
-    wf.nodes.forEach(node => {
-      // LoadImage: set uploaded filename
-      if (node.id === 11) {
-        node.widgets_values[0] = filename;
-        return;
-      }
-      // SwitchCase: set case index
-      if (node.id === activeGroup) {
-        node.widgets_values[0] = caseIdx;
-        return;
-      }
-      // Mute nodes from other groups
-      const inactiveGroups = Object.keys(GROUP_NODES)
-        .map(Number).filter(g => g !== activeGroup);
-      for (const g of inactiveGroups) {
-        if (GROUP_NODES[g].includes(node.id)) {
-          node.mode = 4; // muted
-          return;
-        }
-      }
-    });
+    // API format: wf is {node_id: {inputs, class_type}, ...}
+    wf['11'].inputs.image = filename;           // LoadImage
+    wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
     // 3. Submit workflow
     setStatus('워크플로우 제출 중...', 'pending');
@@ -617,10 +599,7 @@ document.getElementById('generateBtn').onclick = async () => {
         'X-API-Key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        prompt: {},
-        extra_data: { extra_pnginfo: { workflow: wf } },
-      }),
+      body: JSON.stringify({ prompt: wf }),
     });
     if (!submitRes.ok) {
       const err = await submitRes.text();
@@ -753,22 +732,14 @@ async function generateAngle() {
     setStatus('워크플로우 준비 중...', 'pending');
     const wf = JSON.parse(JSON.stringify(ANGLE_WORKFLOW));
 
-    // LoadImage 파일명 변경 (node id=41)
-    wf.nodes.forEach(node => {
-      if (node.id === 41) { node.widgets_values[0] = filename; }
-      // 선택된 앵글 제외 나머지 mute
-      const activeChain = ANGLE_CHAINS[selectedAngle] || [];
-      if (!activeChain.includes(node.id) && node.id !== 41) {
-        const allChainNodes = Object.values(ANGLE_CHAINS).flat();
-        if (allChainNodes.includes(node.id)) node.mode = 4;
-      }
-    });
+    // API format: wf is {node_id: {inputs, class_type}, ...}
+    wf['41'].inputs.image = filename;  // LoadImage
 
     setStatus('워크플로우 제출 중...', 'pending');
     const submitRes = await fetch(`${API_BASE}/api/prompt`, {
       method: 'POST',
       headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: {}, extra_data: { extra_pnginfo: { workflow: wf } } }),
+      body: JSON.stringify({ prompt: wf }),
     });
     if (!submitRes.ok) {
       const err = await submitRes.text();
