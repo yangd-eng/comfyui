@@ -687,7 +687,19 @@ function pruneWorkflow(wf, startNodeIds, switchSelects = {}) {
 
   const pruned = {};
   for (const id of needed) {
-    if (wf[id]) pruned[id] = wf[id];
+    if (!wf[id]) continue;
+    // Deep copy node
+    pruned[id] = JSON.parse(JSON.stringify(wf[id]));
+    // For SwitchCase: remove unselected case inputs so validation doesn't fail
+    const inputs = pruned[id].inputs || {};
+    if ('case_0' in inputs && 'select' in inputs) {
+      const selectIdx = switchSelects[id] !== undefined ? switchSelects[id] : inputs.select;
+      for (const key of Object.keys(inputs)) {
+        if (key.startsWith('case_') && key !== `case_${selectIdx}`) {
+          delete pruned[id].inputs[key];
+        }
+      }
+    }
   }
   return pruned;
 }
@@ -775,20 +787,24 @@ document.getElementById('generateBtn').onclick = async () => {
       const statusRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, {
         headers: { 'X-API-Key': apiKey },
       });
-      if (!statusRes.ok) continue;
+      if (!statusRes.ok) {
+        console.warn('[Poll] 상태 조회 실패:', statusRes.status, await statusRes.text());
+        continue;
+      }
       const statusData = await statusRes.json();
       const s = statusData.status;
       pollCount++;
+      console.log(`[Poll ${pollCount}] status="${s}"`, JSON.stringify(statusData).slice(0, 200));
 
       if (s === 'completed' || s === 'success') { done = true; }
-      else if (s === 'error') { throw new Error(`실행 오류: ${statusData.error_message}`); }
+      else if (s === 'error') { throw new Error(`실행 오류: ${JSON.stringify(statusData)}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
       else if (s === 'in_progress' || s === 'running') {
         setProgressStep('ps-process', 75);
         setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
       } else {
         setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... (${s})`, 'pending');
+        setStatus(`대기 중... (${s}, ${Math.floor(pollCount * 3)}s)`, 'pending');
       }
     }
 
@@ -949,18 +965,23 @@ async function generateAngle() {
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
       const sRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, { headers: { 'X-API-Key': apiKey } });
-      if (!sRes.ok) continue;
+      if (!sRes.ok) {
+        console.warn('[Poll] 상태 조회 실패:', sRes.status, await sRes.text());
+        continue;
+      }
       const sData = await sRes.json();
       pollCount++;
+      console.log(`[Poll ${pollCount}] status="${sData.status}"`, JSON.stringify(sData).slice(0, 200));
+
       if (sData.status === 'completed' || sData.status === 'success') { done = true; }
-      else if (sData.status === 'error') throw new Error(`실행 오류: ${sData.error_message}`);
+      else if (sData.status === 'error') throw new Error(`실행 오류: ${JSON.stringify(sData)}`);
       else if (sData.status === 'cancelled') throw new Error('작업이 취소되었습니다.');
       else if (sData.status === 'in_progress' || sData.status === 'running') {
         setProgressStep('ps-process', 75);
         setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
       } else {
         setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... (${sData.status})`, 'pending');
+        setStatus(`대기 중... (${sData.status}, ${Math.floor(pollCount * 3)}s)`, 'pending');
       }
     }
 
