@@ -179,6 +179,41 @@
   .status-bar.error { border-color: var(--danger); color: var(--danger); }
   .status-bar.success { border-color: var(--success); color: var(--success); }
 
+  /* ── Progress Bar ── */
+  .progress-wrap {
+    display: none; margin-top: 0.6rem;
+    background: var(--surface2); border-radius: 2px; overflow: hidden;
+    height: 3px;
+  }
+  .progress-wrap.visible { display: block; }
+  .progress-bar {
+    height: 100%; width: 0%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+    border-radius: 2px;
+  }
+  .progress-bar.indeterminate {
+    width: 40%;
+    animation: indeterminate 1.4s ease-in-out infinite;
+  }
+  @keyframes indeterminate {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+  .progress-steps {
+    display: none; margin-top: 0.4rem;
+    font-size: 0.68rem; letter-spacing: 0.06em;
+    color: var(--muted); font-family: 'Pretendard', sans-serif;
+  }
+  .progress-steps.visible { display: flex; gap: 0.4rem; align-items: center; }
+  .progress-steps .step { opacity: 0.35; }
+  .progress-steps .step.done { opacity: 0.6; }
+  .progress-steps .step.active { opacity: 1; color: var(--accent); }
+  .progress-steps .sep { opacity: 0.25; }
+  .elapsed {
+    margin-left: auto; opacity: 0.5; font-variant-numeric: tabular-nums;
+  }
+
   /* ── Results ── */
   .results {
     display: none; gap: 1.5rem;
@@ -376,6 +411,21 @@
 
   <!-- Status -->
   <div class="status-bar" id="statusBar"></div>
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="progress-steps" id="progressSteps">
+    <span class="step" id="ps-upload">업로드</span>
+    <span class="sep">›</span>
+    <span class="step" id="ps-submit">제출</span>
+    <span class="sep">›</span>
+    <span class="step" id="ps-queue">대기</span>
+    <span class="sep">›</span>
+    <span class="step" id="ps-process">처리 중</span>
+    <span class="sep">›</span>
+    <span class="step" id="ps-result">결과</span>
+    <span class="elapsed" id="elapsedTime"></span>
+  </div>
 
   <!-- 표정 결과 (2장) -->
   <div class="results" id="results-expr">
@@ -542,12 +592,63 @@ function checkReady() {
 }
 
 // ── Status helpers ──
+let _startTime = 0;
+let _elapsedTimer = null;
+
 function setStatus(msg, type='') {
   const bar = document.getElementById('statusBar');
   bar.className = 'status-bar visible' + (type ? ' '+type : '');
   bar.innerHTML = type === 'pending'
     ? `<span class="spinner"></span>${msg}`
     : msg;
+}
+
+function startProgress() {
+  _startTime = Date.now();
+  document.getElementById('progressWrap').classList.add('visible');
+  document.getElementById('progressSteps').classList.add('visible');
+  setProgressStep('ps-upload', 40);
+  clearInterval(_elapsedTimer);
+  _elapsedTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - _startTime) / 1000);
+    const m = Math.floor(s / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    document.getElementById('elapsedTime').textContent = m > 0 ? `${m}:${ss}` : `${s}s`;
+  }, 1000);
+}
+
+function stopProgress(success) {
+  clearInterval(_elapsedTimer);
+  const bar = document.getElementById('progressBar');
+  bar.classList.remove('indeterminate');
+  bar.style.width = success ? '100%' : '0%';
+  if (!success) {
+    document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('progressSteps').classList.remove('visible');
+  }
+  // reset steps
+  ['ps-upload','ps-submit','ps-queue','ps-process','ps-result'].forEach(id => {
+    document.getElementById(id).className = 'step';
+  });
+}
+
+function setProgressStep(activeId, pct) {
+  const order = ['ps-upload','ps-submit','ps-queue','ps-process','ps-result'];
+  const idx = order.indexOf(activeId);
+  order.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (i < idx) el.className = 'step done';
+    else if (i === idx) el.className = 'step active';
+    else el.className = 'step';
+  });
+  const bar = document.getElementById('progressBar');
+  if (activeId === 'ps-queue' || activeId === 'ps-process') {
+    bar.classList.add('indeterminate');
+    bar.style.width = '';
+  } else {
+    bar.classList.remove('indeterminate');
+    bar.style.width = pct + '%';
+  }
 }
 
 // ── Generate ──
@@ -578,12 +679,15 @@ document.getElementById('generateBtn').onclick = async () => {
 
   try {
     // 1. Upload image
+    startProgress();
     setStatus('이미지 업로드 중...', 'pending');
+    setProgressStep('ps-upload', 20);
     const upData = await uploadImageXHR(previewFile, apiKey);
     const filename = upData.name;
 
     // 2. Build modified workflow
     setStatus('워크플로우 준비 중...', 'pending');
+    setProgressStep('ps-submit', 40);
     const wf = JSON.parse(JSON.stringify(WORKFLOW)); // deep copy
     const activeGroup = String(selectedExpr.sc);
     const caseIdx = selectedExpr.idx;
@@ -594,6 +698,7 @@ document.getElementById('generateBtn').onclick = async () => {
 
     // 3. Submit workflow
     setStatus('워크플로우 제출 중...', 'pending');
+    setProgressStep('ps-submit', 55);
     const submitRes = await fetch(`${API_BASE}/api/prompt`, {
       method: 'POST',
       headers: {
@@ -614,7 +719,9 @@ document.getElementById('generateBtn').onclick = async () => {
 
     // 4. Poll status
     setStatus(`생성 중... (ID: ${promptId.slice(0,8)}...)`, 'pending');
+    setProgressStep('ps-queue', 60);
     let done = false;
+    let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
       const statusRes = await fetch(`${API_BASE}/api/job/${promptId}/status`, {
@@ -623,15 +730,23 @@ document.getElementById('generateBtn').onclick = async () => {
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
       const s = statusData.status;
+      pollCount++;
 
-      if (s === 'completed') { done = true; }
+      if (s === 'completed' || s === 'success') { done = true; }
       else if (s === 'error') { throw new Error(`실행 오류: ${statusData.error_message}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
-      else { setStatus(`${s === 'in_progress' ? '처리 중' : '대기 중'}... (${s})`, 'pending'); }
+      else if (s === 'in_progress' || s === 'running') {
+        setProgressStep('ps-process', 75);
+        setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
+      } else {
+        setProgressStep('ps-queue', 60);
+        setStatus(`대기 중... (${s})`, 'pending');
+      }
     }
 
     // 5. Get results
     setStatus('결과 가져오는 중...', 'pending');
+    setProgressStep('ps-result', 90);
     const histRes = await fetch(`${API_BASE}/api/history/${promptId}`, {
       headers: { 'X-API-Key': apiKey },
     });
@@ -678,9 +793,11 @@ document.getElementById('generateBtn').onclick = async () => {
       resultFace.src = faceImgUrl;
     }
     document.getElementById('results-expr').classList.add('visible');
+    stopProgress(true);
     setStatus(`완료! "${selectedExpr.ko}" 표정 생성 성공`, 'success');
 
   } catch (e) {
+    stopProgress(false);
     setStatus(`오류: ${e.message}`, 'error');
   } finally {
     document.getElementById('generateBtn').disabled = false;
@@ -729,17 +846,21 @@ async function generateAngle() {
   document.getElementById('results-angle').classList.remove('visible');
 
   try {
+    startProgress();
     setStatus('이미지 업로드 중...', 'pending');
+    setProgressStep('ps-upload', 20);
     const upData = await uploadImageXHR(previewFile, apiKey);
     const filename = upData.name;
 
     setStatus('워크플로우 준비 중...', 'pending');
+    setProgressStep('ps-submit', 40);
     const wf = JSON.parse(JSON.stringify(ANGLE_WORKFLOW));
 
     // API format: wf is {node_id: {inputs, class_type}, ...}
     wf['41'].inputs.image = filename;  // LoadImage
 
     setStatus('워크플로우 제출 중...', 'pending');
+    setProgressStep('ps-submit', 55);
     const submitRes = await fetch(`${API_BASE}/api/prompt`, {
       method: 'POST',
       headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
@@ -756,19 +877,29 @@ async function generateAngle() {
     const promptId = submitData.prompt_id;
 
     setStatus(`생성 중... (ID: ${promptId.slice(0,8)}...)`, 'pending');
+    setProgressStep('ps-queue', 60);
     let done = false;
+    let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
       const sRes = await fetch(`${API_BASE}/api/job/${promptId}/status`, { headers: { 'X-API-Key': apiKey } });
       if (!sRes.ok) continue;
       const sData = await sRes.json();
-      if (sData.status === 'completed') { done = true; }
+      pollCount++;
+      if (sData.status === 'completed' || sData.status === 'success') { done = true; }
       else if (sData.status === 'error') throw new Error(`실행 오류: ${sData.error_message}`);
       else if (sData.status === 'cancelled') throw new Error('작업이 취소되었습니다.');
-      else setStatus(`${sData.status === 'in_progress' ? '처리 중' : '대기 중'}... (${sData.status})`, 'pending');
+      else if (sData.status === 'in_progress' || sData.status === 'running') {
+        setProgressStep('ps-process', 75);
+        setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
+      } else {
+        setProgressStep('ps-queue', 60);
+        setStatus(`대기 중... (${sData.status})`, 'pending');
+      }
     }
 
     setStatus('결과 가져오는 중...', 'pending');
+    setProgressStep('ps-result', 90);
     const histRes = await fetch(`${API_BASE}/api/history/${promptId}`, { headers: { 'X-API-Key': apiKey } });
     if (!histRes.ok) throw new Error('결과 조회 실패');
     const histData = await histRes.json();
@@ -786,9 +917,11 @@ async function generateAngle() {
       document.getElementById('resultAngle').src = imgUrl;
       document.getElementById('results-angle').classList.add('visible');
     }
+    stopProgress(true);
     setStatus(`완료! "${selectedAngle}" 앵글 생성 성공`, 'success');
 
   } catch(e) {
+    stopProgress(false);
     setStatus(`오류: ${e.message}`, 'error');
   } finally {
     document.getElementById('generateBtn').disabled = false;
