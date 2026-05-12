@@ -45,23 +45,27 @@ export default function handler(req, res) {
   };
 
   const proxyReq = https.request(options, (proxyRes) => {
-    const contentType = proxyRes.headers['content-type'] || 'application/json';
+    const contentType = proxyRes.headers['content-type'] || 'application/octet-stream';
     const responseHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length',
+      'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length, Content-Type',
       'Content-Type': contentType,
     };
+    // Pass through content-length for binary responses
     if (proxyRes.headers['content-length']) {
       responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
     }
-    // Add download header for image requests
-    if (fullPath.includes('/api/view') && contentType.startsWith('image/')) {
-      const fname = new URL('https://x.com' + fullPath).searchParams.get('filename') || 'image.png';
-      responseHeaders['Content-Disposition'] = `attachment; filename="${fname}"`;
+    // Pass through transfer-encoding
+    if (proxyRes.headers['transfer-encoding']) {
+      responseHeaders['Transfer-Encoding'] = proxyRes.headers['transfer-encoding'];
     }
 
     res.writeHead(proxyRes.statusCode, responseHeaders);
-    proxyRes.pipe(res);
+
+    // Stream binary data without any transformation
+    proxyRes.on('data', (chunk) => res.write(chunk));
+    proxyRes.on('end', () => res.end());
+    proxyRes.on('error', (err) => { console.error('[ProxyRes Error]', err); res.end(); });
   });
 
   proxyReq.on('error', (err) => {
