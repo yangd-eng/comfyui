@@ -489,9 +489,9 @@ const WORKFLOW = {"1":{"inputs":{"prompt":"Edit the provided image. Keep the sam
 
 // Preview nodes per group (전신, 얼굴)
 const GROUP_PREVIEWS = {
-  35: [8024, 8024],
-  36: [8022, 8022],
-  38: [8025, 8025],
+  35: [8024, 99001],
+  36: [8022, 99001],
+  38: [8025, 99001],
 };
 
 let selectedExpr = null;
@@ -728,10 +728,14 @@ document.getElementById('generateBtn').onclick = async () => {
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
-    // Bypass SeedVR2+FaceParsing: SaveImage directly from SwitchCase output
-    const SAVE_BYPASS = { '35': '8024', '36': '8022', '38': '8025' };
-    const saveId = SAVE_BYPASS[activeGroup];
-    if (wf[saveId]) wf[saveId].inputs.images = [activeGroup, 0];
+    // Add face-crop SaveImage node dynamically (id: '99001')
+    const FACE_CROP_NODES = { '35': '547:510', '36': '328:315', '38': '611:570' };
+    const faceCropSrc = FACE_CROP_NODES[activeGroup];
+    wf['99001'] = {
+      inputs: { filename_prefix: 'face', images: [faceCropSrc, 0] },
+      class_type: 'SaveImage',
+      _meta: { title: 'Face Crop Output' }
+    };
 
     // Redirect all unselected case inputs to the selected node
     // → validation passes + pruning naturally excludes inactive Gemini nodes
@@ -1023,10 +1027,20 @@ async function generateAngle() {
   }
 }
 
-function downloadImg(imgId, filename) {
+async function downloadImg(imgId, filename) {
   const img = document.getElementById(imgId);
-  const a = document.createElement('a');
-  a.href = img.src; a.download = filename; a.click();
+  if (!img || !img.src) return;
+  try {
+    const res = await fetch(img.src);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  } catch(e) {
+    // Fallback: open in new tab
+    window.open(img.src, '_blank');
+  }
 }
 </script>
 </body>
