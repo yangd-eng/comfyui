@@ -728,12 +728,14 @@ document.getElementById('generateBtn').onclick = async () => {
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
-    // Add face close-up SaveImage node dynamically (id: '99001')
-    // Uses UltimateSDUpscale output = enhanced face before being inserted back
+    // Full image: redirect existing SaveImage to SwitchCase output (= Gemini full body result)
+    const FULL_SAVE = { '35': '8024', '36': '8022', '38': '8025' };
+    wf[FULL_SAVE[activeGroup]].inputs.images = [activeGroup, 0];
+
+    // Face close-up: new SaveImage from UltimateSDUpscale output
     const FACE_UPSCALE_NODES = { '35': '547:517', '36': '328:318', '38': '611:577' };
-    const faceUpscaleSrc = FACE_UPSCALE_NODES[activeGroup];
     wf['99001'] = {
-      inputs: { filename_prefix: 'face', images: [faceUpscaleSrc, 0] },
+      inputs: { filename_prefix: 'face', images: [FACE_UPSCALE_NODES[activeGroup], 0] },
       class_type: 'SaveImage',
       _meta: { title: 'Face Close-up Output' }
     };
