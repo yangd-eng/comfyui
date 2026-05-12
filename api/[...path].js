@@ -45,12 +45,19 @@ export default function handler(req, res) {
   };
 
   const proxyReq = https.request(options, (proxyRes) => {
+    const contentType = proxyRes.headers['content-type'] || 'application/json';
     const responseHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Content-Type': proxyRes.headers['content-type'] || 'application/json',
+      'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length',
+      'Content-Type': contentType,
     };
     if (proxyRes.headers['content-length']) {
       responseHeaders['Content-Length'] = proxyRes.headers['content-length'];
+    }
+    // Add download header for image requests
+    if (fullPath.includes('/api/view') && contentType.startsWith('image/')) {
+      const fname = new URL('https://x.com' + fullPath).searchParams.get('filename') || 'image.png';
+      responseHeaders['Content-Disposition'] = `attachment; filename="${fname}"`;
     }
 
     res.writeHead(proxyRes.statusCode, responseHeaders);
