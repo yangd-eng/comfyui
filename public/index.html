@@ -728,7 +728,19 @@ document.getElementById('generateBtn').onclick = async () => {
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
-    // Prune: only keep nodes needed for the selected expression
+    // Redirect all unselected case inputs to the selected node
+    // → validation passes + pruning naturally excludes inactive Gemini nodes
+    const selectedCaseKey = `case_${caseIdx}`;
+    const selectedCaseRef = wf[activeGroup].inputs[selectedCaseKey];
+    if (selectedCaseRef) {
+      for (const key of Object.keys(wf[activeGroup].inputs)) {
+        if (key.startsWith('case_') && key !== selectedCaseKey) {
+          wf[activeGroup].inputs[key] = [...selectedCaseRef];
+        }
+      }
+    }
+
+    // Prune: only keep nodes reachable from the selected SaveImage
     const saveNodeId = SAVE_NODES_EXPR[activeGroup];
     wf = pruneWorkflow(wf, [saveNodeId]);
     console.log(`[Expr] 실행 노드 수: ${Object.keys(wf).length}`);
@@ -773,15 +785,17 @@ document.getElementById('generateBtn').onclick = async () => {
       pollCount++;
       console.log(`[Poll ${pollCount}] status="${s}"`, JSON.stringify(statusData).slice(0, 200));
 
-      if (s === 'completed' || s === 'success') { done = true; }
-      else if (s === 'error') { throw new Error(`실행 오류: ${JSON.stringify(statusData)}`); }
+      const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
+      const ERROR_STATUSES = ['error', 'failed', 'failure'];
+      if (DONE_STATUSES.includes(s)) { done = true; }
+      else if (ERROR_STATUSES.includes(s)) { throw new Error(`실행 오류: ${JSON.stringify(statusData)}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
-      else if (s === 'in_progress' || s === 'running') {
+      else if (s === 'in_progress' || s === 'running' || s === 'executing') {
         setProgressStep('ps-process', 75);
         setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
       } else {
         setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... (${s}, ${Math.floor(pollCount * 3)}s)`, 'pending');
+        setStatus(`대기 중... [${s}] ${Math.floor(pollCount * 3)}s`, 'pending');
       }
     }
 
@@ -793,20 +807,22 @@ document.getElementById('generateBtn').onclick = async () => {
     const endpoints = [
       `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
+      `${API_BASE}/api/jobs/${promptId}/status`,
     ];
     let lastErr = '결과 조회 실패';
     for (const ep of endpoints) {
       try {
         const r = await fetch(ep, { headers: { 'X-API-Key': apiKey } });
         const txt = await r.text();
-        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status} ${ep.split('/').pop()}): ${txt.slice(0,150)}`; continue; }
+        console.log(`[Result] ${ep.split('/').slice(-2).join('/')}: ${txt.slice(0,300)}`);
+        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status}): ${txt.slice(0,150)}`; continue; }
         const d = JSON.parse(txt);
-        outputs = d.outputs ?? d[promptId]?.outputs ?? d;
-        lastErr = null;
-        break;
+        outputs = d.outputs ?? d[promptId]?.outputs ?? {};
+        if (Object.keys(outputs).length > 0) { lastErr = null; break; }
+        lastErr = `출력 없음 (${ep.split('/').pop()})`;
       } catch(e) { lastErr = e.message; }
     }
-    if (lastErr && Object.keys(outputs).length === 0) throw new Error(lastErr);
+    if (Object.keys(outputs).length === 0) throw new Error(lastErr);
 
     // Find output images from preview nodes
     const previews = GROUP_PREVIEWS[activeGroup];
@@ -950,15 +966,17 @@ async function generateAngle() {
       pollCount++;
       console.log(`[Poll ${pollCount}] status="${sData.status}"`, JSON.stringify(sData).slice(0, 200));
 
-      if (sData.status === 'completed' || sData.status === 'success') { done = true; }
-      else if (sData.status === 'error') throw new Error(`실행 오류: ${JSON.stringify(sData)}`);
+      const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
+      const ERROR_STATUSES = ['error', 'failed', 'failure'];
+      if (DONE_STATUSES.includes(sData.status)) { done = true; }
+      else if (ERROR_STATUSES.includes(sData.status)) throw new Error(`실행 오류: ${JSON.stringify(sData)}`);
       else if (sData.status === 'cancelled') throw new Error('작업이 취소되었습니다.');
-      else if (sData.status === 'in_progress' || sData.status === 'running') {
+      else if (['in_progress','running','executing'].includes(sData.status)) {
         setProgressStep('ps-process', 75);
         setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
       } else {
         setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... (${sData.status}, ${Math.floor(pollCount * 3)}s)`, 'pending');
+        setStatus(`대기 중... [${sData.status}] ${Math.floor(pollCount * 3)}s`, 'pending');
       }
     }
 
@@ -969,20 +987,22 @@ async function generateAngle() {
     const endpoints = [
       `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
+      `${API_BASE}/api/jobs/${promptId}/status`,
     ];
     let lastErr = '결과 조회 실패';
     for (const ep of endpoints) {
       try {
         const r = await fetch(ep, { headers: { 'X-API-Key': apiKey } });
         const txt = await r.text();
-        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status} ${ep.split('/').pop()}): ${txt.slice(0,150)}`; continue; }
+        console.log(`[Result] ${ep.split('/').slice(-2).join('/')}: ${txt.slice(0,300)}`);
+        if (!r.ok) { lastErr = `결과 조회 실패 (${r.status}): ${txt.slice(0,150)}`; continue; }
         const d = JSON.parse(txt);
-        outputs = d.outputs ?? d[promptId]?.outputs ?? d;
-        lastErr = null;
-        break;
+        outputs = d.outputs ?? d[promptId]?.outputs ?? {};
+        if (Object.keys(outputs).length > 0) { lastErr = null; break; }
+        lastErr = `출력 없음 (${ep.split('/').pop()})`;
       } catch(e) { lastErr = e.message; }
     }
-    if (lastErr && Object.keys(outputs).length === 0) throw new Error(lastErr);
+    if (Object.keys(outputs).length === 0) throw new Error(lastErr);
     const previewNodeId = String(ANGLE_PREVIEWS[selectedAngle]);
     let imgUrl = null;
     if (outputs[previewNodeId]?.images?.[0]) {
