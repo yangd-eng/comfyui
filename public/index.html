@@ -778,30 +778,26 @@ document.getElementById('generateBtn').onclick = async () => {
     let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
-      const statusRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, {
+      const statusRes = await fetch(`${API_BASE}/api/jobs/${promptId}`, {
         headers: { 'X-API-Key': apiKey },
       });
       if (!statusRes.ok) {
         console.warn('[Poll] 상태 조회 실패:', statusRes.status, await statusRes.text());
         continue;
       }
-      const statusData = await statusRes.json();
+      const rawText2 = await statusRes.text();
+      const statusData = JSON.parse(rawText2);
       const s = statusData.status;
       pollCount++;
-      console.log(`[Poll ${pollCount}] status="${s}"`, JSON.stringify(statusData).slice(0, 200));
+
+      // Show full raw status in UI for debugging
+      setStatus(`[${s}] ${Math.floor(pollCount * 3)}s — ${rawText2.slice(0, 120)}`, 'pending');
 
       const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
       const ERROR_STATUSES = ['error', 'failed', 'failure'];
       if (DONE_STATUSES.includes(s)) { done = true; }
-      else if (ERROR_STATUSES.includes(s)) { throw new Error(`실행 오류: ${JSON.stringify(statusData)}`); }
+      else if (ERROR_STATUSES.includes(s)) { throw new Error(`실행 오류: ${rawText2.slice(0,300)}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
-      else if (s === 'in_progress' || s === 'running' || s === 'executing') {
-        setProgressStep('ps-process', 75);
-        setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
-      } else {
-        setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... [${s}] ${Math.floor(pollCount * 3)}s`, 'pending');
-      }
     }
 
     // 5. Get results
@@ -812,7 +808,7 @@ document.getElementById('generateBtn').onclick = async () => {
     const endpoints = [
       `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
-      `${API_BASE}/api/jobs/${promptId}/status`,
+      `${API_BASE}/api/jobs/${promptId}`,
     ];
     let lastErr = '결과 조회 실패';
     for (const ep of endpoints) {
@@ -962,27 +958,22 @@ async function generateAngle() {
     let pollCount = 0;
     while (!done) {
       await new Promise(r => setTimeout(r, 3000));
-      const sRes = await fetch(`${API_BASE}/api/jobs/${promptId}/status`, { headers: { 'X-API-Key': apiKey } });
+      const sRes = await fetch(`${API_BASE}/api/jobs/${promptId}`, { headers: { 'X-API-Key': apiKey } });
       if (!sRes.ok) {
         console.warn('[Poll] 상태 조회 실패:', sRes.status, await sRes.text());
         continue;
       }
-      const sData = await sRes.json();
+      const rawAngle = await sRes.text();
+      const sData = JSON.parse(rawAngle);
       pollCount++;
-      console.log(`[Poll ${pollCount}] status="${sData.status}"`, JSON.stringify(sData).slice(0, 200));
+
+      setStatus(`[${sData.status}] ${Math.floor(pollCount * 3)}s — ${rawAngle.slice(0, 120)}`, 'pending');
 
       const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
       const ERROR_STATUSES = ['error', 'failed', 'failure'];
       if (DONE_STATUSES.includes(sData.status)) { done = true; }
-      else if (ERROR_STATUSES.includes(sData.status)) throw new Error(`실행 오류: ${JSON.stringify(sData)}`);
+      else if (ERROR_STATUSES.includes(sData.status)) throw new Error(`실행 오류: ${rawAngle.slice(0,300)}`);
       else if (sData.status === 'cancelled') throw new Error('작업이 취소되었습니다.');
-      else if (['in_progress','running','executing'].includes(sData.status)) {
-        setProgressStep('ps-process', 75);
-        setStatus(`처리 중... (${Math.floor(pollCount * 3)}s 경과)`, 'pending');
-      } else {
-        setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... [${sData.status}] ${Math.floor(pollCount * 3)}s`, 'pending');
-      }
     }
 
     setStatus('결과 가져오는 중...', 'pending');
@@ -992,7 +983,7 @@ async function generateAngle() {
     const endpoints = [
       `${API_BASE}/api/jobs/${promptId}`,
       `${API_BASE}/api/history/${promptId}`,
-      `${API_BASE}/api/jobs/${promptId}/status`,
+      `${API_BASE}/api/jobs/${promptId}`,
     ];
     let lastErr = '결과 조회 실패';
     for (const ep of endpoints) {
