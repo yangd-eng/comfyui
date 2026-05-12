@@ -751,7 +751,7 @@ document.getElementById('generateBtn').onclick = async () => {
 
     // Prune: only keep nodes reachable from the selected SaveImage
     const saveNodeId = SAVE_NODES_EXPR[activeGroup];
-    wf = pruneWorkflow(wf, [saveNodeId]);
+    wf = pruneWorkflow(wf, [saveNodeId, '99001']);
     console.log(`[Expr] 실행 노드 수: ${Object.keys(wf).length}`);
 
     // 3. Submit workflow
@@ -846,10 +846,10 @@ document.getElementById('generateBtn').onclick = async () => {
     // Helper: build image URL from output image object
     function buildImgUrl(img) {
       if (!img) return null;
-      // cloud.comfy.org returns {filename, subfolder, type} or just a URL string
       if (typeof img === 'string') return img;
       if (img.url) return img.url;
-      return `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type || 'output'}&subfolder=${img.subfolder ?? ''}`;
+      const sub = (img.subfolder && img.subfolder !== 'null') ? `&subfolder=${encodeURIComponent(img.subfolder)}` : '';
+      return `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type || 'output'}${sub}`;
     }
 
     // Find output images from preview nodes
