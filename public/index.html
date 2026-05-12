@@ -328,6 +328,68 @@
 </style>
 </head>
 <body>
+
+<div id="lockScreen" style="
+  position: fixed; inset: 0; z-index: 9999;
+  background: #111111;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-family: 'Pretendard', sans-serif;
+">
+  <div style="text-align: center; margin-bottom: 2.5rem;">
+    <div style="font-size: 1rem; font-weight: 700; letter-spacing: 0.15em; color: #eefd41;">LCT ComfyUI</div>
+    <div style="font-size: 0.72rem; letter-spacing: 0.2em; color: #555; margin-top: 0.3rem;">COMFYUI CLOUD · LCT MODULE</div>
+  </div>
+  <div style="width: 280px;">
+    <input id="codeInput" type="password" placeholder="초대 코드 입력" style="
+      width: 100%; box-sizing: border-box;
+      background: #1a1a1a; border: 1px solid #2e2e2e; color: #fff;
+      font-family: 'Pretendard', sans-serif; font-size: 0.9rem;
+      letter-spacing: 0.08em; padding: 0.85rem 1rem;
+      outline: none; margin-bottom: 0.6rem;
+      transition: border-color 0.2s;
+    " onkeydown="if(event.key==='Enter') tryUnlock()">
+    <button onclick="tryUnlock()" style="
+      width: 100%; padding: 0.85rem;
+      background: #eefd41; color: #111; border: none;
+      font-family: 'Pretendard', sans-serif; font-weight: 700;
+      font-size: 0.82rem; letter-spacing: 0.15em;
+      cursor: pointer; transition: background 0.2s;
+    " onmouseover="this.style.background='#d4e030'" onmouseout="this.style.background='#eefd41'">입장</button>
+    <div id="lockError" style="
+      color: #e05c5c; font-size: 0.72rem; letter-spacing: 0.06em;
+      text-align: center; margin-top: 0.6rem; min-height: 1rem;
+    "></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const CODES = ['LCT2026!'];
+  const SESSION_KEY = 'lct_auth';
+
+  function tryUnlock() {
+    const val = document.getElementById('codeInput').value.trim();
+    if (CODES.includes(val)) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('lockScreen').style.display = 'none';
+    } else {
+      const err = document.getElementById('lockError');
+      err.textContent = '올바르지 않은 코드입니다.';
+      document.getElementById('codeInput').value = '';
+      document.getElementById('codeInput').focus();
+      setTimeout(() => { err.textContent = ''; }, 2500);
+    }
+  }
+  window.tryUnlock = tryUnlock;
+
+  // Check session
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('lockScreen').style.display = 'none';
+  }
+})();
+</script>
+
 <header>
   <h1>LCT ComfyUI 모듈</h1>
   <span>COMFYUI CLOUD · LCT MODULE</span>
