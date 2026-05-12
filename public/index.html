@@ -728,6 +728,11 @@ document.getElementById('generateBtn').onclick = async () => {
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
+    // Bypass SeedVR2+FaceParsing: SaveImage directly from SwitchCase output
+    const SAVE_BYPASS = { '35': '8024', '36': '8022', '38': '8025' };
+    const saveId = SAVE_BYPASS[activeGroup];
+    if (wf[saveId]) wf[saveId].inputs.images = [activeGroup, 0];
+
     // Redirect all unselected case inputs to the selected node
     // → validation passes + pruning naturally excludes inactive Gemini nodes
     const selectedCaseKey = `case_${caseIdx}`;
