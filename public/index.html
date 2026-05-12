@@ -871,11 +871,23 @@ document.getElementById('generateBtn').onclick = async () => {
 
     console.log('[URLs]', fullImgUrl, faceImgUrl);
 
-    // Display results
+    // Fetch images as blobs (fixes CORS + download)
+    async function loadImgBlob(url, imgEl) {
+      if (!url) return;
+      try {
+        const r = await fetch(url, { headers: { 'X-API-Key': apiKey } });
+        if (!r.ok) { console.error('이미지 로드 실패:', r.status, url); return; }
+        const blob = await r.blob();
+        imgEl.src = URL.createObjectURL(blob);
+        imgEl.dataset.blobUrl = imgEl.src;
+      } catch(e) { console.error('이미지 fetch 오류:', e); }
+    }
     const resultFull = document.getElementById('resultFull');
     const resultFace = document.getElementById('resultFace');
-    if (fullImgUrl) resultFull.src = fullImgUrl;
-    if (faceImgUrl) resultFace.src = faceImgUrl;
+    await Promise.all([
+      loadImgBlob(fullImgUrl, resultFull),
+      loadImgBlob(faceImgUrl, resultFace),
+    ]);
     document.getElementById('results-expr').classList.add('visible');
     stopProgress(true);
     setStatus(`완료! "${selectedExpr.ko}" 표정 생성 성공`, 'success');
@@ -1049,20 +1061,14 @@ async function generateAngle() {
   }
 }
 
-async function downloadImg(imgId, filename) {
+function downloadImg(imgId, filename) {
   const img = document.getElementById(imgId);
   if (!img || !img.src) return;
-  try {
-    const res = await fetch(img.src);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
-  } catch(e) {
-    // Fallback: open in new tab
-    window.open(img.src, '_blank');
-  }
+  // img.src is already a blob URL from loadImgBlob
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = filename;
+  a.click();
 }
 </script>
 </body>
