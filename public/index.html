@@ -728,13 +728,14 @@ document.getElementById('generateBtn').onclick = async () => {
     wf['11'].inputs.image = filename;           // LoadImage
     wf[activeGroup].inputs.select = caseIdx;    // SwitchCase
 
-    // Add face-crop SaveImage node dynamically (id: '99001')
-    const FACE_CROP_NODES = { '35': '547:510', '36': '328:315', '38': '611:570' };
-    const faceCropSrc = FACE_CROP_NODES[activeGroup];
+    // Add face close-up SaveImage node dynamically (id: '99001')
+    // Uses UltimateSDUpscale output = enhanced face before being inserted back
+    const FACE_UPSCALE_NODES = { '35': '547:517', '36': '328:318', '38': '611:577' };
+    const faceUpscaleSrc = FACE_UPSCALE_NODES[activeGroup];
     wf['99001'] = {
-      inputs: { filename_prefix: 'face', images: [faceCropSrc, 0] },
+      inputs: { filename_prefix: 'face', images: [faceUpscaleSrc, 0] },
       class_type: 'SaveImage',
-      _meta: { title: 'Face Crop Output' }
+      _meta: { title: 'Face Close-up Output' }
     };
 
     // Redirect all unselected case inputs to the selected node
