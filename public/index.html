@@ -794,14 +794,27 @@ document.getElementById('generateBtn').onclick = async () => {
       const s = statusData.status;
       pollCount++;
 
-      // Show full raw status in UI for debugging
-      setStatus(`[${s}] ${Math.floor(pollCount * 3)}s — ${rawText2.slice(0, 120)}`, 'pending');
+      // Extract progress % if available
+      const pct = statusData.progress ?? statusData.progress_percentage ?? null;
+      const pctStr = pct !== null ? ` ${Math.round(pct * 100)}%` : ` ${Math.floor(pollCount * 3)}s`;
+      if (pct !== null) {
+        const bar = document.getElementById('progressBar');
+        bar.classList.remove('indeterminate');
+        bar.style.width = `${Math.round(pct * 100)}%`;
+      }
 
       const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
       const ERROR_STATUSES = ['error', 'failed', 'failure'];
       if (DONE_STATUSES.includes(s)) { done = true; }
       else if (ERROR_STATUSES.includes(s)) { throw new Error(`실행 오류: ${rawText2.slice(0,300)}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
+      else if (s === 'in_progress' || s === 'running' || s === 'executing') {
+        setProgressStep('ps-process', 75);
+        setStatus(`처리 중...${pctStr}`, 'pending');
+      } else {
+        setProgressStep('ps-queue', 60);
+        setStatus(`대기 중... [${s}]${pctStr}`, 'pending');
+      }
     }
 
     // 5. Get results
@@ -828,45 +841,40 @@ document.getElementById('generateBtn').onclick = async () => {
       } catch(e) { lastErr = e.message; }
     }
     if (Object.keys(outputs).length === 0) throw new Error(lastErr);
+    console.log('[Outputs]', JSON.stringify(outputs).slice(0, 500));
+
+    // Helper: build image URL from output image object
+    function buildImgUrl(img) {
+      if (!img) return null;
+      // cloud.comfy.org returns {filename, subfolder, type} or just a URL string
+      if (typeof img === 'string') return img;
+      if (img.url) return img.url;
+      return `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type || 'output'}&subfolder=${img.subfolder ?? ''}`;
+    }
 
     // Find output images from preview nodes
     const previews = GROUP_PREVIEWS[activeGroup];
-
-    let fullImgUrl = null, faceImgUrl = null;
     const previewNode0 = String(previews[0]);
     const previewNode1 = String(previews[1]);
 
-    if (outputs[previewNode0]?.images?.[0]) {
-      const img = outputs[previewNode0].images[0];
-      fullImgUrl = `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type}&subfolder=${img.subfolder ?? ''}`;
-    }
-    if (outputs[previewNode1]?.images?.[0]) {
-      const img = outputs[previewNode1].images[0];
-      faceImgUrl = `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type}&subfolder=${img.subfolder ?? ''}`;
+    let fullImgUrl = buildImgUrl(outputs[previewNode0]?.images?.[0]);
+    let faceImgUrl = buildImgUrl(outputs[previewNode1]?.images?.[0]);
+
+    // Fallback: use all output images in order
+    if (!fullImgUrl && !faceImgUrl) {
+      const allImages = Object.values(outputs).flatMap(o => o.images ?? []);
+      console.log('[Fallback images]', allImages);
+      fullImgUrl = buildImgUrl(allImages[0]);
+      faceImgUrl = buildImgUrl(allImages[1]);
     }
 
-    if (!fullImgUrl && !faceImgUrl) {
-      // Fallback: show all output images
-      const allImages = Object.values(outputs).flatMap(o => o.images ?? []);
-      if (allImages[0]) {
-        const img = allImages[0];
-        fullImgUrl = `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type}`;
-      }
-      if (allImages[1]) {
-        const img = allImages[1];
-        faceImgUrl = `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type}`;
-      }
-    }
+    console.log('[URLs]', fullImgUrl, faceImgUrl);
 
     // Display results
     const resultFull = document.getElementById('resultFull');
     const resultFace = document.getElementById('resultFace');
-    if (fullImgUrl) {
-      resultFull.src = fullImgUrl;
-    }
-    if (faceImgUrl) {
-      resultFace.src = faceImgUrl;
-    }
+    if (fullImgUrl) resultFull.src = fullImgUrl;
+    if (faceImgUrl) resultFace.src = faceImgUrl;
     document.getElementById('results-expr').classList.add('visible');
     stopProgress(true);
     setStatus(`완료! "${selectedExpr.ko}" 표정 생성 성공`, 'success');
@@ -971,13 +979,26 @@ async function generateAngle() {
       const sData = JSON.parse(rawAngle);
       pollCount++;
 
-      setStatus(`[${sData.status}] ${Math.floor(pollCount * 3)}s — ${rawAngle.slice(0, 120)}`, 'pending');
+      const aPct = sData.progress ?? sData.progress_percentage ?? null;
+      const aPctStr = aPct !== null ? ` ${Math.round(aPct * 100)}%` : ` ${Math.floor(pollCount * 3)}s`;
+      if (aPct !== null) {
+        const bar = document.getElementById('progressBar');
+        bar.classList.remove('indeterminate');
+        bar.style.width = `${Math.round(aPct * 100)}%`;
+      }
 
       const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
       const ERROR_STATUSES = ['error', 'failed', 'failure'];
       if (DONE_STATUSES.includes(sData.status)) { done = true; }
       else if (ERROR_STATUSES.includes(sData.status)) throw new Error(`실행 오류: ${rawAngle.slice(0,300)}`);
       else if (sData.status === 'cancelled') throw new Error('작업이 취소되었습니다.');
+      else if (['in_progress','running','executing'].includes(sData.status)) {
+        setProgressStep('ps-process', 75);
+        setStatus(`처리 중...${aPctStr}`, 'pending');
+      } else {
+        setProgressStep('ps-queue', 60);
+        setStatus(`대기 중... [${sData.status}]${aPctStr}`, 'pending');
+      }
     }
 
     setStatus('결과 가져오는 중...', 'pending');
