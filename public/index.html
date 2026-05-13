@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LCT ComfyUI 모듈</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Zalando+Sans+SemiExpanded:wght@700&display=swap');
   @font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Thin.woff2') format('woff2'); font-weight: 100; font-display: swap; }
   @font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-ExtraLight.woff2') format('woff2'); font-weight: 200; font-display: swap; }
   @font-face { font-family: 'Pretendard'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/pretendard@1.0/Pretendard-Light.woff2') format('woff2'); font-weight: 300; font-display: swap; }
@@ -337,7 +338,7 @@
   font-family: 'Pretendard', sans-serif;
 ">
   <div style="text-align: center; margin-bottom: 2.5rem;">
-    <div style="font-size: 1rem; font-weight: 700; letter-spacing: 0.15em; color: #eefd41;">LCT ComfyUI</div>
+    <div style="font-family:'Zalando Sans SemiExpanded',sans-serif;font-weight:700;font-size:1.1rem;letter-spacing:0.08em;color:#eefd41;">LCT COMFYUI MODULE</div>
     <div style="font-size: 0.72rem; letter-spacing: 0.2em; color: #555; margin-top: 0.3rem;">COMFYUI CLOUD · LCT MODULE</div>
   </div>
   <div style="width: 280px;">
@@ -519,7 +520,13 @@ async function generatePose() {
     const hr = await fetch(`${API_BASE}/api/jobs/${promptId}`, { headers: { 'X-API-Key': apiKey } });
     const hd = await hr.json();
     const outputs = hd.outputs ?? hd[promptId]?.outputs ?? {};
-    const img = Object.values(outputs).flatMap(o => o.images ?? [])[0];
+    console.log('[Pose outputs]', JSON.stringify(outputs).slice(0, 500));
+
+    // Specifically get SaveImage node 52 (final GeminiNanoBanana2 result)
+    // Fall back to last output node if 52 not found
+    const saveNode = outputs['52'];
+    const img = saveNode?.images?.[0]
+      ?? Object.values(outputs).flatMap(o => o.images ?? []).slice(-1)[0];
     if (!img) throw new Error('결과 이미지를 찾을 수 없습니다.');
     const sub = (img.subfolder && img.subfolder !== 'null') ? `&subfolder=${encodeURIComponent(img.subfolder)}` : '';
     const imgUrl = `${API_BASE}/api/view?filename=${encodeURIComponent(img.filename)}&type=${img.type||'output'}${sub}`;
@@ -550,7 +557,7 @@ async function generatePose() {
 </script>
 
 <header>
-  <h1>LCT ComfyUI 모듈</h1>
+  <h1 style="font-family:'Zalando Sans SemiExpanded',sans-serif;font-weight:700;letter-spacing:0.08em;">LCT COMFYUI MODULE</h1>
   <span>COMFYUI CLOUD · LCT MODULE</span>
 </header>
 
@@ -571,8 +578,7 @@ async function generatePose() {
         <input type="file" id="fileInput" accept="image/*">
         <div class="upload-icon">⊕</div>
         <div class="upload-hint">
-          이미지를 드래그하거나<br>클릭해서 업로드<br><br>
-          <span style="font-size:0.6rem">JPG · PNG · WEBP · 최대 50MB</span>
+드래그 또는 클릭<br><span style="font-size:0.6rem">JPG · PNG · WEBP</span>
         </div>
       </div>
       <div class="expr-panel" id="exprPanel">
@@ -597,7 +603,7 @@ async function generatePose() {
     <div class="main-grid">
       <div class="upload-zone-mirror" id="mirrorAngle">
         <div class="upload-icon">⊕</div>
-        <div class="upload-hint">이미지를 드래그하거나<br>클릭해서 업로드<br><br><span style="font-size:0.6rem">JPG · PNG · WEBP · 최대 50MB</span></div>
+        <div class="upload-hint">드래그 또는 클릭<br><span style="font-size:0.6rem">JPG · PNG · WEBP</span></div>
       </div>
       <div class="expr-panel" id="anglePanel">
         <div>
@@ -618,8 +624,8 @@ async function generatePose() {
 
   <!-- 포즈 탭 -->
   <div class="tab-panel" id="panel-pose">
-    <!-- 업로드 박스 2개 좌우 배치 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem;">
+    <!-- 업로드 박스 2개 좌우 배치 (표정/앵글과 동일한 main-grid gap) -->
+    <div class="main-grid" style="align-items:start;">
       <div>
         <div style="font-size:0.7rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">포즈 레퍼런스</div>
         <div class="upload-zone-mirror" id="poseUploadRef"
@@ -645,6 +651,10 @@ async function generatePose() {
         <input type="file" id="poseFileChar" accept="image/*" style="display:none" onchange="handlePoseFile(this.files[0],'char')">
       </div>
     </div>
+    <!-- 디스클레이머 -->
+    <p style="font-size:0.68rem;letter-spacing:0.06em;color:var(--accent);margin:0.8rem 0 1.6rem 0;">
+      * 원본 캐릭터 이미지 사이즈는 768×1024에 맞춰주세요
+    </p>
 
     <button class="generate-btn" id="poseGenerateBtn" disabled onclick="generatePose()">GENERATE</button>
     <div class="status-bar" id="poseStatusBar"></div>
