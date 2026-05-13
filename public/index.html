@@ -835,7 +835,7 @@ function handleFile(f) {
 }
 
 function syncMirrors(src) {
-  document.querySelectorAll('.upload-zone-mirror').forEach(m => {
+  document.querySelectorAll('.upload-zone-mirror:not(#poseUploadRef):not(#poseUploadChar)').forEach(m => {
     const hint = m.querySelector('.upload-hint');
     const icon = m.querySelector('.upload-icon');
     if (hint) hint.style.display = 'none';
@@ -853,7 +853,7 @@ function syncMirrors(src) {
     }
   });
 }
-document.querySelectorAll('.upload-zone-mirror').forEach(m => {
+document.querySelectorAll('.upload-zone-mirror:not(#poseUploadRef):not(#poseUploadChar)').forEach(m => {
   m.addEventListener('click', () => document.getElementById('fileInput').click());
   m.addEventListener('dragover', e => { e.preventDefault(); m.classList.add('dragover'); });
   m.addEventListener('dragleave', () => m.classList.remove('dragover'));
