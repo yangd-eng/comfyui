@@ -174,7 +174,7 @@
     font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.78rem;
     font-size: 0.84rem; letter-spacing: 0.05em; padding: 0.9rem 1rem;
     border: 1px solid var(--border); background: var(--surface);
-    display: none; margin-top: 1.2rem;
+    display: none; margin-top: 0.6rem;
   }
   .status-bar.visible { display: block; }
   .status-bar.error { border-color: var(--danger); color: var(--danger); }
@@ -182,7 +182,7 @@
 
   /* ── Progress Bar ── */
   .progress-wrap {
-    display: none; margin-top: 1rem;
+    display: none; margin-top: 0.3rem;
   }
   .progress-wrap.visible { display: block; }
   .progress-track {
@@ -205,7 +205,7 @@
   }
   .progress-info {
     display: flex; justify-content: space-between; align-items: center;
-    margin-top: 0.5rem;
+    margin-top: 0.3rem;
   }
   .progress-pct {
     font-family: 'Pretendard', sans-serif; font-weight: 700;
@@ -215,7 +215,7 @@
   }
   .progress-pct.indeterminate-pct { color: var(--muted); font-size: 0.8rem; }
   .progress-steps {
-    display: none; margin-top: 0.6rem;
+    display: none; margin-top: 0.35rem;
     font-size: 0.76rem; letter-spacing: 0.06em;
     color: var(--muted); font-family: 'Pretendard', sans-serif;
   }
@@ -231,7 +231,7 @@
 
   /* ── Results ── */
   .results {
-    display: none; gap: 1.5rem; margin-top: 2.5rem;
+    display: none; gap: 1.5rem; margin-top: 1.2rem;
   }
   .results.visible { display: grid; grid-template-columns: 1fr 1fr; }
   .result-card {
@@ -523,10 +523,20 @@ async function generatePose() {
       else if (ERR.includes(s)) throw new Error(`실행 오류: ${JSON.stringify(pd)}`);
       else if (s === 'cancelled') throw new Error('작업이 취소되었습니다.');
       else if (['in_progress','running','executing'].includes(s)) {
-        setPoseStep('pps-process', 75);
-        setPoseStatus(`처리 중... ${pct !== null ? Math.round(pct*100)+'%' : pollCount*3+'s'}`, 'pending');
+        const elapsed = pollCount * 3;
+        const simPct = aPctVal !== null ? aPctVal : Math.round(10 + 85 * (1 - Math.exp(-elapsed / 80)));
+        const _bar = document.getElementById('poseProgressBar');
+        const _pEl = document.getElementById('poseProgressPct');
+        _bar.classList.remove('indeterminate'); _bar.style.width = simPct + '%';
+        if (_pEl) { _pEl.className = 'progress-pct'; _pEl.textContent = simPct + '%'; }
+        setPoseStatus(`처리 중... (${elapsed}s)`, 'pending');
       } else {
-        setPoseStep('pps-queue', 60);
+        const elapsed = pollCount * 3;
+        const simPct = Math.min(9, Math.round(elapsed / 4));
+        const _bar = document.getElementById('poseProgressBar');
+        const _pEl = document.getElementById('poseProgressPct');
+        _bar.classList.remove('indeterminate'); _bar.style.width = simPct + '%';
+        if (_pEl) { _pEl.className = 'progress-pct'; _pEl.textContent = simPct + '%'; }
         setPoseStatus(`대기 중... [${s}]`, 'pending');
       }
     }
@@ -1153,11 +1163,21 @@ document.getElementById('generateBtn').onclick = async () => {
       else if (ERROR_STATUSES.includes(s)) { throw new Error(`실행 오류: ${rawText2.slice(0,300)}`); }
       else if (s === 'cancelled') { throw new Error('작업이 취소되었습니다.'); }
       else if (s === 'in_progress' || s === 'running' || s === 'executing') {
-        setProgressStep('ps-process', 75);
-        setStatus(`처리 중...${pctStr}`, 'pending');
+        const elapsed = pollCount * 3;
+        const simPct = pctVal !== null ? pctVal : Math.round(10 + 85 * (1 - Math.exp(-elapsed / 80)));
+        const _bar = document.getElementById('progressBar');
+        const _pEl = document.getElementById('progressPct');
+        _bar.classList.remove('indeterminate'); _bar.style.width = simPct + '%';
+        if (_pEl) { _pEl.className = 'progress-pct'; _pEl.textContent = simPct + '%'; }
+        setStatus(`처리 중... (${elapsed}s)`, 'pending');
       } else {
-        setProgressStep('ps-queue', 60);
-        setStatus(`대기 중... [${s}]${pctStr}`, 'pending');
+        const elapsed = pollCount * 3;
+        const simPct = Math.min(9, Math.round(elapsed / 4));
+        const _bar = document.getElementById('progressBar');
+        const _pEl = document.getElementById('progressPct');
+        _bar.classList.remove('indeterminate'); _bar.style.width = simPct + '%';
+        if (_pEl) { _pEl.className = 'progress-pct'; _pEl.textContent = simPct + '%'; }
+        setStatus(`대기 중... [${s}]`, 'pending');
       }
     }
 
