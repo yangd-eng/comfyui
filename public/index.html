@@ -627,7 +627,20 @@ async function generatePose() {
     <!-- 업로드 박스 2개 좌우 배치 (표정/앵글과 동일한 main-grid gap) -->
     <div class="main-grid" style="align-items:start;">
       <div>
-        <div style="font-size:0.8rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">포즈 레퍼런스</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <span style="font-size:0.8rem;letter-spacing:0.1em;color:var(--muted);">포즈 레퍼런스</span>
+          <a href="https://posemy.art/app/" target="_blank" style="
+            display:inline-flex;align-items:center;gap:0.25rem;
+            font-size:0.68rem;letter-spacing:0.08em;color:var(--accent2);
+            text-decoration:none;border:1px solid var(--border);
+            padding:0.15rem 0.5rem;border-radius:2px;
+            transition:all 0.2s;white-space:nowrap;
+          "
+          onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)';this.style.transform='translateX(2px)'"
+          onmouseout="this.style.color='var(--accent2)';this.style.borderColor='var(--border)';this.style.transform='translateX(0)'">
+            PoseMyArt <span style="font-size:0.75rem;">↗</span>
+          </a>
+        </div>
         <div class="upload-zone-mirror" id="poseUploadRef"
           onclick="document.getElementById('poseFileRef').click()"
           ondragover="event.preventDefault();this.classList.add('dragover')"
