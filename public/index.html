@@ -444,7 +444,7 @@ async function generatePose() {
   if (!poseRefFile || !poseCharFile) return;
   const apiKey = API_KEY;
   document.getElementById('poseGenerateBtn').disabled = true;
-  document.getElementById('poseResultGrid').style.display = 'none';
+  document.getElementById('results-pose').style.display = 'none';
   document.getElementById('poseProgressWrap').classList.add('visible');
   document.getElementById('poseProgressSteps').classList.add('visible');
 
@@ -529,7 +529,7 @@ async function generatePose() {
     const blob = await ir.blob();
     const poseResultEl = document.getElementById('poseResult');
     poseResultEl.src = URL.createObjectURL(blob);
-    document.getElementById('poseResultGrid').style.display = 'grid';
+    document.getElementById('results-pose').style.display = 'grid';
 
     // Done
     clearInterval(_timer);
