@@ -155,12 +155,12 @@
 
   /* ── Generate button ── */
   .generate-btn {
-    width: 100%; padding: 1rem;
+    width: 100%; padding: 0.9rem 1rem;
     background: transparent; border: 1px solid var(--accent);
     color: var(--accent); font-family: 'Pretendard', sans-serif;
-    font-weight: 600; font-size: 0.92rem; letter-spacing: 0.15em;
+    font-weight: 600; font-size: 0.92rem; letter-spacing: 0.12em;
     cursor: pointer; transition: all 0.2s;
-    text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
   }
   .generate-btn:hover:not(:disabled) {
     background: var(--accent); color: #111111;
@@ -183,14 +183,16 @@
   /* ── Progress Bar ── */
   .progress-wrap {
     display: none; margin-top: 1rem;
-    background: var(--surface2); border-radius: 2px; overflow: hidden;
-    height: 3px;
   }
   .progress-wrap.visible { display: block; }
+  .progress-track {
+    background: var(--surface2); border-radius: 2px; overflow: hidden;
+    height: 4px; position: relative;
+  }
   .progress-bar {
     height: 100%; width: 0%;
     background: var(--accent);
-    transition: width 0.4s ease;
+    transition: width 0.5s ease;
     border-radius: 2px;
   }
   .progress-bar.indeterminate {
@@ -201,6 +203,17 @@
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
   }
+  .progress-info {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 0.5rem;
+  }
+  .progress-pct {
+    font-family: 'Pretendard', sans-serif; font-weight: 700;
+    font-size: 1.1rem; color: var(--accent);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+    transition: all 0.3s;
+  }
+  .progress-pct.indeterminate-pct { color: var(--muted); font-size: 0.8rem; }
   .progress-steps {
     display: none; margin-top: 0.6rem;
     font-size: 0.76rem; letter-spacing: 0.06em;
@@ -213,6 +226,7 @@
   .progress-steps .sep { opacity: 0.25; }
   .elapsed {
     margin-left: auto; opacity: 0.5; font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
   }
 
   /* ── Results ── */
@@ -424,7 +438,7 @@ function setPoseStatus(msg, type='') {
   bar.innerHTML = type === 'pending' ? `<span class="spinner"></span>${msg}` : msg;
 }
 
-function setPoseStep(activeId, pct) {
+function setPoseStep(activeId, pct, pctText) {
   const order = ['pps-upload','pps-submit','pps-queue','pps-process','pps-result'];
   const idx = order.indexOf(activeId);
   order.forEach((id, i) => {
@@ -434,10 +448,13 @@ function setPoseStep(activeId, pct) {
     else el.className = 'step';
   });
   const bar = document.getElementById('poseProgressBar');
+  const pctEl = document.getElementById('poseProgressPct');
   if (activeId === 'pps-queue' || activeId === 'pps-process') {
     bar.classList.add('indeterminate'); bar.style.width = '';
+    if (pctEl) { pctEl.className = 'progress-pct indeterminate-pct'; pctEl.textContent = pctText || '처리 중...'; }
   } else {
     bar.classList.remove('indeterminate'); bar.style.width = pct + '%';
+    if (pctEl) { pctEl.className = 'progress-pct'; pctEl.textContent = pct + '%'; }
   }
 }
 
@@ -669,10 +686,15 @@ async function generatePose() {
       * 원본 캐릭터 이미지 사이즈는 768×1024에 맞춰주세요
     </p>
 
-    <button class="generate-btn" id="poseGenerateBtn" disabled onclick="generatePose()">GENERATE</button>
+    <button class="generate-btn" id="poseGenerateBtn" disabled onclick="generatePose()">실행</button>
     <div class="status-bar" id="poseStatusBar"></div>
     <div class="progress-wrap" id="poseProgressWrap">
-      <div class="progress-bar" id="poseProgressBar"></div>
+      <div class="progress-track">
+        <div class="progress-bar" id="poseProgressBar"></div>
+      </div>
+      <div class="progress-info">
+        <span class="progress-pct indeterminate-pct" id="poseProgressPct">대기 중...</span>
+      </div>
     </div>
     <div class="progress-steps" id="poseProgressSteps">
       <span class="step" id="pps-upload">업로드</span>
@@ -698,12 +720,17 @@ async function generatePose() {
   </div>
 
   <!-- Generate -->
-  <button class="generate-btn" id="generateBtn" disabled>GENERATE</button>
+  <button class="generate-btn" id="generateBtn" disabled>실행</button>
 
   <!-- Status -->
   <div class="status-bar" id="statusBar"></div>
   <div class="progress-wrap" id="progressWrap">
-    <div class="progress-bar" id="progressBar"></div>
+    <div class="progress-track">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-info">
+      <span class="progress-pct indeterminate-pct" id="progressPct">대기 중...</span>
+    </div>
   </div>
   <div class="progress-steps" id="progressSteps">
     <span class="step" id="ps-upload">업로드</span>
@@ -924,19 +951,23 @@ function startProgress() {
 function stopProgress(success) {
   clearInterval(_elapsedTimer);
   const bar = document.getElementById('progressBar');
+  const pctEl = document.getElementById('progressPct');
   bar.classList.remove('indeterminate');
   bar.style.width = success ? '100%' : '0%';
+  if (pctEl) {
+    pctEl.className = 'progress-pct';
+    pctEl.textContent = success ? '100%' : '0%';
+  }
   if (!success) {
     document.getElementById('progressWrap').classList.remove('visible');
     document.getElementById('progressSteps').classList.remove('visible');
   }
-  // reset steps
   ['ps-upload','ps-submit','ps-queue','ps-process','ps-result'].forEach(id => {
     document.getElementById(id).className = 'step';
   });
 }
 
-function setProgressStep(activeId, pct) {
+function setProgressStep(activeId, pct, pctText) {
   const order = ['ps-upload','ps-submit','ps-queue','ps-process','ps-result'];
   const idx = order.indexOf(activeId);
   order.forEach((id, i) => {
@@ -946,12 +977,15 @@ function setProgressStep(activeId, pct) {
     else el.className = 'step';
   });
   const bar = document.getElementById('progressBar');
+  const pctEl = document.getElementById('progressPct');
   if (activeId === 'ps-queue' || activeId === 'ps-process') {
     bar.classList.add('indeterminate');
     bar.style.width = '';
+    if (pctEl) { pctEl.className = 'progress-pct indeterminate-pct'; pctEl.textContent = pctText || '처리 중...'; }
   } else {
     bar.classList.remove('indeterminate');
     bar.style.width = pct + '%';
+    if (pctEl) { pctEl.className = 'progress-pct'; pctEl.textContent = pct + '%'; }
   }
 }
 
@@ -1103,11 +1137,14 @@ document.getElementById('generateBtn').onclick = async () => {
 
       // Extract progress % if available
       const pct = statusData.progress ?? statusData.progress_percentage ?? null;
-      const pctStr = pct !== null ? ` ${Math.round(pct * 100)}%` : ` ${Math.floor(pollCount * 3)}s`;
-      if (pct !== null) {
+      const pctVal = pct !== null ? Math.round(pct * 100) : null;
+      const pctStr = pctVal !== null ? ` ${pctVal}%` : ` ${Math.floor(pollCount * 3)}s`;
+      if (pctVal !== null) {
         const bar = document.getElementById('progressBar');
+        const pctEl = document.getElementById('progressPct');
         bar.classList.remove('indeterminate');
-        bar.style.width = `${Math.round(pct * 100)}%`;
+        bar.style.width = `${pctVal}%`;
+        if (pctEl) { pctEl.className = 'progress-pct'; pctEl.textContent = pctVal + '%'; }
       }
 
       const DONE_STATUSES = ['completed', 'success', 'finished', 'done'];
