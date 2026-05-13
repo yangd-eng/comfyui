@@ -58,7 +58,7 @@
   }
   header span {
     font-family: 'Pretendard', sans-serif; font-weight: 300;
-    font-size: 0.7rem; color: var(--muted); letter-spacing: 0.2em;
+    font-size: 0.78rem; color: var(--muted); letter-spacing: 0.2em;
   }
 
   .container {
@@ -129,7 +129,7 @@
     display: flex; flex-direction: column; gap: 1.2rem;
   }
   .expr-section-label {
-    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.68rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.76rem;
     letter-spacing: 0.18em; color: var(--muted);
     border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
   }
@@ -139,7 +139,7 @@
   .expr-btn {
     background: var(--surface); border: 1px solid var(--border);
     color: var(--text); padding: 0.65rem 0.8rem;
-    font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.82rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.9rem;
     cursor: pointer; text-align: left; transition: all 0.15s;
     line-height: 1.4;
   }
@@ -149,7 +149,7 @@
     color: #111111; font-weight: 600;
   }
   .expr-btn .en {
-    font-family: 'Pretendard', sans-serif; font-weight: 300; font-size: 0.63rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 300; font-size: 0.72rem;
     color: inherit; opacity: 0.7; display: block; margin-top: 0.2rem;
   }
 
@@ -158,7 +158,7 @@
     width: 100%; padding: 1rem;
     background: transparent; border: 1px solid var(--accent);
     color: var(--accent); font-family: 'Pretendard', sans-serif;
-    font-weight: 600; font-size: 0.85rem; letter-spacing: 0.15em;
+    font-weight: 600; font-size: 0.92rem; letter-spacing: 0.15em;
     cursor: pointer; transition: all 0.2s;
     text-transform: uppercase;
   }
@@ -172,9 +172,9 @@
   /* ── Status ── */
   .status-bar {
     font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.78rem;
-    letter-spacing: 0.05em; padding: 0.8rem 1rem;
+    font-size: 0.84rem; letter-spacing: 0.05em; padding: 0.9rem 1rem;
     border: 1px solid var(--border); background: var(--surface);
-    display: none;
+    display: none; margin-top: 1.2rem;
   }
   .status-bar.visible { display: block; }
   .status-bar.error { border-color: var(--danger); color: var(--danger); }
@@ -182,7 +182,7 @@
 
   /* ── Progress Bar ── */
   .progress-wrap {
-    display: none; margin-top: 0.6rem;
+    display: none; margin-top: 1rem;
     background: var(--surface2); border-radius: 2px; overflow: hidden;
     height: 3px;
   }
@@ -202,8 +202,8 @@
     100% { transform: translateX(300%); }
   }
   .progress-steps {
-    display: none; margin-top: 0.4rem;
-    font-size: 0.68rem; letter-spacing: 0.06em;
+    display: none; margin-top: 0.6rem;
+    font-size: 0.76rem; letter-spacing: 0.06em;
     color: var(--muted); font-family: 'Pretendard', sans-serif;
   }
   .progress-steps.visible { display: flex; gap: 0.4rem; align-items: center; }
@@ -217,7 +217,7 @@
 
   /* ── Results ── */
   .results {
-    display: none; gap: 1.5rem;
+    display: none; gap: 1.5rem; margin-top: 2.5rem;
   }
   .results.visible { display: grid; grid-template-columns: 1fr 1fr; }
   .result-card {
@@ -228,14 +228,14 @@
   }
   .result-label {
     padding: 0.6rem 0.8rem;
-    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.7rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.78rem;
     letter-spacing: 0.12em; color: var(--muted);
     border-top: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
   }
   .download-btn {
     background: none; border: none; color: var(--accent2);
-    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.7rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 500; font-size: 0.78rem;
     cursor: pointer; letter-spacing: 0.08em; transition: color 0.15s;
   }
   .download-btn:hover { color: var(--accent); }
@@ -257,7 +257,7 @@
   .tab-btn {
     background: transparent; border: none; border-bottom: 2px solid transparent;
     color: var(--muted); font-family: 'Pretendard', sans-serif;
-    font-weight: 500; font-size: 0.85rem; letter-spacing: 0.08em;
+    font-weight: 500; font-size: 0.92rem; letter-spacing: 0.08em;
     padding: 0.7rem 1.4rem; cursor: pointer; transition: all 0.15s;
     margin-bottom: -1px;
   }
@@ -276,7 +276,7 @@
   .angle-btn {
     background: var(--surface); border: 1px solid var(--border);
     color: var(--text); padding: 0.7rem 0.5rem;
-    font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.82rem;
+    font-family: 'Pretendard', sans-serif; font-weight: 400; font-size: 0.9rem;
     cursor: pointer; text-align: center; transition: all 0.15s; line-height: 1.4;
   }
   .angle-btn:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
@@ -627,7 +627,7 @@ async function generatePose() {
     <!-- 업로드 박스 2개 좌우 배치 (표정/앵글과 동일한 main-grid gap) -->
     <div class="main-grid" style="align-items:start;">
       <div>
-        <div style="font-size:0.7rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">포즈 레퍼런스</div>
+        <div style="font-size:0.8rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">포즈 레퍼런스</div>
         <div class="upload-zone-mirror" id="poseUploadRef"
           onclick="document.getElementById('poseFileRef').click()"
           ondragover="event.preventDefault();this.classList.add('dragover')"
@@ -639,7 +639,7 @@ async function generatePose() {
         <input type="file" id="poseFileRef" accept="image/*" style="display:none" onchange="handlePoseFile(this.files[0],'ref')">
       </div>
       <div>
-        <div style="font-size:0.7rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">원본 캐릭터</div>
+        <div style="font-size:0.8rem;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;">원본 캐릭터</div>
         <div class="upload-zone-mirror" id="poseUploadChar"
           onclick="document.getElementById('poseFileChar').click()"
           ondragover="event.preventDefault();this.classList.add('dragover')"
@@ -652,7 +652,7 @@ async function generatePose() {
       </div>
     </div>
     <!-- 디스클레이머 -->
-    <p style="font-size:0.68rem;letter-spacing:0.06em;color:var(--accent);margin:0.8rem 0 1.6rem 0;">
+    <p style="font-size:0.78rem;letter-spacing:0.06em;color:var(--accent);margin:0.8rem 0 1.6rem 0;">
       * 원본 캐릭터 이미지 사이즈는 768×1024에 맞춰주세요
     </p>
 
